@@ -37,11 +37,30 @@ public class BeritaAcaraResource {
         plnLogo.scaleToFit(60, 60);
         iconLogo.scaleToFit(60, 60);
 
+<<<<<<< Updated upstream
         PdfPCell leftLogo = new PdfPCell(plnLogo);
         PdfPCell rightLogo = new PdfPCell(iconLogo);
         leftLogo.setBorder(Rectangle.NO_BORDER);
         rightLogo.setBorder(Rectangle.NO_BORDER);
         rightLogo.setHorizontalAlignment(Element.ALIGN_RIGHT);
+=======
+        // 2. Tambahkan Logo Header
+        PdfPTable headerTable = new PdfPTable(2);
+        headerTable.setWidthPercentage(100);
+        
+        // Coba muat logo dari resources
+        try (InputStream plnIs = getClass().getResourceAsStream("/images/iconplus_logo.png");
+             InputStream iconIs = getClass().getResourceAsStream("/images/pln_logo.png")) {
+            
+            if (iconIs != null) {
+                Image iconLogo = Image.getInstance(iconIs.readAllBytes());
+                iconLogo.scaleToFit(100, 50);
+                PdfPCell iconCell = new PdfPCell(iconLogo);
+                iconCell.setBorder(Rectangle.NO_BORDER);
+                iconCell.setHorizontalAlignment(Element.ALIGN_LEFT);
+                headerTable.addCell(iconCell);
+            }
+>>>>>>> Stashed changes
 
         logoTable.addCell(leftLogo);
         logoTable.addCell(rightLogo);
