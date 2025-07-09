@@ -57,8 +57,8 @@ public class BeritaAcaraResource {
         headerTable.setWidthPercentage(100);
         
         // Coba muat logo dari resources
-        try (InputStream plnIs = getClass().getResourceAsStream("/images/pln_logo.png");
-             InputStream iconIs = getClass().getResourceAsStream("/images/iconplus_logo.png")) {
+        try (InputStream plnIs = getClass().getResourceAsStream("/images/iconplus_logo.png");
+             InputStream iconIs = getClass().getResourceAsStream("/images/pln_logo.png")) {
             
             if (iconIs != null) {
                 Image iconLogo = Image.getInstance(iconIs.readAllBytes());
