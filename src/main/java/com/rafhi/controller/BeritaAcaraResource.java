@@ -126,8 +126,35 @@ public class BeritaAcaraResource {
             table.addCell(getBodyCell(f.catatan != null ? f.catatan : "-"));
         }
 
+<<<<<<< Updated upstream
         doc.add(table);
         doc.add(Chunk.NEWLINE);
+=======
+        // Cek apakah ada penandatangan "utama" sebelum membuat tabelnya
+        if (!utamaList.isEmpty()) {
+            PdfPTable utamaTable = new PdfPTable(utamaList.size()); // Sekarang dijamin tidak akan nol
+            utamaTable.setWidthPercentage(100f);
+            utamaTable.setSpacingBefore(spacingAfter);
+
+            for (Signatory s : utamaList) {
+                utamaTable.addCell(getCell(s.perusahaan, Element.ALIGN_CENTER, fontIsi, false));
+            }
+            for (Signatory s : utamaList) {
+                PdfPCell namaCell = getCell(s.nama, Element.ALIGN_CENTER, fontIsi, false);
+                namaCell.setFixedHeight(60f); // Memberi ruang untuk tanda tangan
+                namaCell.setVerticalAlignment(Element.ALIGN_BOTTOM);
+                utamaTable.addCell(namaCell);
+            }
+            for (Signatory s : utamaList) {
+                utamaTable.addCell(getCell(s.jabatan, Element.ALIGN_CENTER, fontIsi, false));
+            }
+            doc.add(utamaTable);
+        }
+        
+        PdfPTable utamaTable = new PdfPTable(utamaList.size());
+        utamaTable.setWidthPercentage(100f);
+        utamaTable.setSpacingBefore(spacingAfter);
+>>>>>>> Stashed changes
 
         // === PENUTUP PARAGRAF ===
         Paragraph penutup = new Paragraph("Demikian Berita Acara ini dibuat untuk dipergunakan sebagaimana mestinya.", textFont);
@@ -152,7 +179,11 @@ public class BeritaAcaraResource {
         doc.close();
 
         return Response.ok(out.toByteArray())
+<<<<<<< Updated upstream
                 .header("Content-Disposition", "attachment; filename=berita-acara.pdf")
+=======
+                .header("Content-Disposition", "inline; filename=berita-acara-" + request.nomorBA + ".pdf")
+>>>>>>> Stashed changes
                 .build();
     }
 
