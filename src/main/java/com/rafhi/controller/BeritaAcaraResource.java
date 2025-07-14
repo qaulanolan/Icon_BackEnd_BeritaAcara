@@ -85,7 +85,7 @@ public class BeritaAcaraResource {
         Signatory mengetahui = request.signatoryList.stream().filter(s -> "mengetahui".equals(s.tipe)).findFirst().orElse(new Signatory());
         Fitur fitur = (request.fiturList != null && !request.fiturList.isEmpty()) ? request.fiturList.get(0) : new Fitur();
 
-        replacements.put("${jenisRequest}", "Change Request".equalsIgnoreCase(request.jenisRequest) ? "PERUBAHAN" : "PENGEMBANGAN");
+        replacements.put("${jenisRequest}", "Change Request".equalsIgnoreCase(request.jenisRequest) ? "PERUBAHAN" : "PEMBANGUNAN");
         replacements.put("${namaAplikasiSpesifik}", Objects.toString(request.namaAplikasiSpesifik, ""));
         replacements.put("${nomorBA}", Objects.toString(request.nomorBA, ""));
         replacements.put("${judulPekerjaan}", Objects.toString(request.judulPekerjaan, ""));
