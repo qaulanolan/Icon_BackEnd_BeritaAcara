@@ -5,6 +5,7 @@ import com.rafhi.dto.Fitur;
 import com.rafhi.dto.Signatory;
 import com.rafhi.helper.DateToWordsHelper;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -39,13 +40,30 @@ import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTAbstractNum;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTLvl;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STNumberFormat;
 
+// impor buat history
+import com.rafhi.entity.BeritaAcaraHistory;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.json.bind.Jsonb;
+import jakarta.json.bind.JsonbBuilder;
+import jakarta.transaction.Transactional; // Import baru
+import java.time.LocalDateTime; // Import baru
+
+import com.rafhi.dto.HistoryResponseDTO; // Tambahkan import ini
+import java.util.stream.Collectors;
+
 @Path("/berita-acara")
+@ApplicationScoped
 @Consumes("application/json")
 public class BeritaAcaraResource {
+
+    @Inject
+    Jsonb jsonb; // Suntikkan JSON-B untuk konversi ke JSON
 
     @POST
     @Path("/generate-docx")
     @Produces("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    @Transactional // Tambahkan anotasi ini untuk memastikan operasi database dilakukan dalam konteks transaksi
     public Response generateDocx(BeritaAcaraRequest request) throws Exception {
         String templateFileName = "UAT".equalsIgnoreCase(request.jenisBeritaAcara)
                 ? "template_uat.docx"
@@ -76,10 +94,59 @@ public class BeritaAcaraResource {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             document.write(out);
 
+            byte[] docxBytes = out.toByteArray(); // Simpan hasil docx ke variabel
+
+            // --- LOGIKA BARU: Simpan ke History ---
+            BeritaAcaraHistory history = new BeritaAcaraHistory();
+            history.nomorBA = request.nomorBA;
+            history.jenisBeritaAcara = request.jenisBeritaAcara;
+            history.judulPekerjaan = request.judulPekerjaan;
+            history.generationTimestamp = LocalDateTime.now();
+            history.requestJson = jsonb.toJson(request); // Ubah request menjadi string JSON
+            history.fileContent = docxBytes; // Simpan file
+
+            history.persist();
+
             ResponseBuilder response = Response.ok(new ByteArrayInputStream(out.toByteArray()));
             response.header("Content-Disposition", "inline; filename=BA-" + request.nomorBA + ".docx");
             return response.build();
         }
+    }
+
+    @GET
+    @Path("/history")
+    @Produces("application/json")
+    @Transactional // Pastikan ini juga dalam konteks transaksi
+    public Response getHistory() {
+        // Ambil semua data dari database
+        List<BeritaAcaraHistory> historyList = BeritaAcaraHistory.listAll();
+
+        // Ubah list entity menjadi list DTO
+        List<HistoryResponseDTO> responseList = historyList.stream()
+            .map(h -> new HistoryResponseDTO(h.id, h.nomorBA, h.jenisBeritaAcara, h.judulPekerjaan, h.generationTimestamp))
+            .collect(Collectors.toList());
+
+        return Response.ok(responseList).build();
+    }
+
+    // Tambahkan metode ini di dalam kelas BeritaAcaraResource.java
+
+    @GET
+    @Path("/history/{id}/file")
+    @Produces("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    @Transactional
+    public Response getHistoryFile(Long id) {
+        // Cari histori berdasarkan ID
+        BeritaAcaraHistory history = BeritaAcaraHistory.findById(id);
+
+        if (history == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        // Buat respons dengan konten file .docx
+        ResponseBuilder response = Response.ok(new ByteArrayInputStream(history.fileContent));
+        response.header("Content-Disposition", "inline; filename=BA-" + history.nomorBA + ".docx");
+        return response.build();
     }
     
     private Map<String, String> buildReplacementsMap(BeritaAcaraRequest request) {
@@ -153,60 +220,6 @@ public class BeritaAcaraResource {
         }
     }
 
-    // private void replaceInParagraph(XWPFParagraph paragraph, Map<String, String> replacements) {
-    //     for (Map.Entry<String, String> entry : replacements.entrySet()) {
-    //         String placeholder = entry.getKey();
-    //         String replacement = entry.getValue();
-            
-    //         List<XWPFRun> runs = paragraph.getRuns();
-    //         if (runs == null || runs.isEmpty()) continue;
-
-    //         String fullText = paragraph.getText();
-    //         if (!fullText.contains(placeholder)) continue;
-
-    //         // Logika untuk menangani placeholder yang terpisah antar run
-    //         for (int i = 0; i < runs.size(); i++) {
-    //             XWPFRun run = runs.get(i);
-    //             String runText = run.getText(0);
-    //             if (runText == null) continue;
-
-    //             if (runText.contains("$") && (i + 1 < runs.size())) {
-    //                 StringBuilder placeholderBuilder = new StringBuilder(runText);
-                    
-    //                 int j = i + 1;
-    //                 for (; j < runs.size(); j++) {
-    //                     XWPFRun nextRun = runs.get(j);
-    //                     String nextRunText = nextRun.getText(0);
-    //                     if (nextRunText != null) {
-    //                         placeholderBuilder.append(nextRunText);
-    //                     }
-    //                     if (nextRunText != null && nextRunText.contains("}")) {
-    //                         break; // Ditemukan penutup, berhenti menggabung
-    //                     }
-    //                 }
-
-    //                 String combinedText = placeholderBuilder.toString();
-    //                 if (combinedText.contains(placeholder)) {
-    //                     String newText = combinedText.replace(placeholder, replacement);
-                        
-    //                     // Set teks baru di run pertama
-    //                     run.setText(newText, 0);
-
-    //                     // Kosongkan teks di run lain yang sudah digabung
-    //                     for (int k = i + 1; k <= j; k++) {
-    //                         if(k < runs.size()) {
-    //                             paragraph.getRuns().get(k).setText("", 0);
-    //                         }
-    //                     }
-    //                 }
-    //             } else if (runText.contains(placeholder)) {
-    //                 // Kasus sederhana: placeholder ada di dalam satu run
-    //                 runText = runText.replace(placeholder, replacement);
-    //                 run.setText(runText, 0);
-    //             }
-    //         }
-    //     }
-    // }
     private void replaceInParagraph(XWPFParagraph paragraph, Map<String, String> replacements) {
         String paragraphText = paragraph.getText();
         if (paragraphText == null || !paragraphText.contains("$")) {
@@ -292,7 +305,15 @@ public class BeritaAcaraResource {
                                     for (Element li : element.select("li")) {
                                         XWPFParagraph listParagraph = cell.addParagraph();
                                         listParagraph.setNumID(numId);
-                                        listParagraph.setIndentationLeft(200);
+                                        // **PERBAIKAN: Deteksi dan terapkan level indentasi**
+                                        int indentLevel = 0;
+                                        if (li.hasClass("ql-indent-1")) indentLevel = 1;
+                                        if (li.hasClass("ql-indent-2")) indentLevel = 2;
+                                        if (li.hasClass("ql-indent-3")) indentLevel = 3;
+                                        // Tambahkan jika perlu level lebih dalam
+                                        
+                                        listParagraph.setNumILvl(BigInteger.valueOf(indentLevel));
+                                        // Terapkan style font
                                         applyRuns(listParagraph, li, fontFamily, fontSize);
                                     }
                                 }
@@ -331,30 +352,36 @@ public class BeritaAcaraResource {
         }
     }
     
+    // **PERBAIKAN: Membuat definisi multi-level numbering**
     private BigInteger createNumbering(XWPFNumbering numbering, String listType) {
         CTAbstractNum cTAbstractNum = CTAbstractNum.Factory.newInstance();
         // Beri ID unik untuk setiap definisi numbering baru
-        cTAbstractNum.setAbstractNumId(BigInteger.valueOf(System.currentTimeMillis() % 10000));
+        cTAbstractNum.setAbstractNumId(BigInteger.valueOf(System.currentTimeMillis() % 100000));
 
-        CTLvl cTLvl = cTAbstractNum.addNewLvl();
-        cTLvl.setIlvl(BigInteger.valueOf(1));
-        
         if ("ul".equals(listType)) {
-            cTLvl.addNewNumFmt().setVal(STNumberFormat.BULLET);
-            cTLvl.addNewLvlText().setVal("-"); // Karakter bullet
+            // Definisi untuk bullet list multi-level
+            addNumberingLevel(cTAbstractNum, 0, STNumberFormat.BULLET, "-");
+            addNumberingLevel(cTAbstractNum, 1, STNumberFormat.BULLET, "-");
+            addNumberingLevel(cTAbstractNum, 2, STNumberFormat.BULLET, "-");
         } else { // "ol"
-            cTLvl.addNewNumFmt().setVal(STNumberFormat.DECIMAL);
-            cTLvl.addNewLvlText().setVal("%1."); // Format penomoran: 1., 2., dst.
+            // Definisi untuk ordered list multi-level
+            addNumberingLevel(cTAbstractNum, 0, STNumberFormat.DECIMAL, "%1.");
+            addNumberingLevel(cTAbstractNum, 1, STNumberFormat.LOWER_LETTER, "%2.");
+            addNumberingLevel(cTAbstractNum, 2, STNumberFormat.LOWER_ROMAN, "%3.");
         }
 
-        // --- PERBAIKAN DI SINI ---
-        // 1. Buat objek XWPFAbstractNum dari CTAbstractNum
         XWPFAbstractNum abstractNum = new XWPFAbstractNum(cTAbstractNum);
-
-        // 2. Tambahkan objek XWPFAbstractNum ke dalam dokumen
         BigInteger abstractNumId = numbering.addAbstractNum(abstractNum);
-        
-        // 3. Kaitkan ID definisi dengan ID instance numbering
         return numbering.addNum(abstractNumId);
+    }
+
+    // Helper baru untuk menambahkan level ke definisi numbering
+    private void addNumberingLevel(CTAbstractNum abstractNum, int level, STNumberFormat.Enum format, String lvlText) {
+        CTLvl cTLvl = abstractNum.addNewLvl();
+        cTLvl.setIlvl(BigInteger.valueOf(level));
+        cTLvl.addNewNumFmt().setVal(format);
+        cTLvl.addNewLvlText().setVal(lvlText);
+        cTLvl.addNewStart().setVal(BigInteger.valueOf(1));
+        cTLvl.addNewPPr().addNewInd().setLeft(BigInteger.valueOf(310L * (level + 1)));
     }
 }
