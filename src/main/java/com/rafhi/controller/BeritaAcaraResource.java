@@ -52,9 +52,12 @@ import java.time.LocalDateTime; // Import baru
 import com.rafhi.dto.HistoryResponseDTO; // Tambahkan import ini
 import java.util.stream.Collectors;
 
+import org.docx4j.Docx4J;
+import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
+
 @Path("/berita-acara")
 @ApplicationScoped
-@Consumes("application/json")
+// @Consumes("application/json")
 public class BeritaAcaraResource {
 
     @Inject
@@ -105,10 +108,13 @@ public class BeritaAcaraResource {
             history.requestJson = jsonb.toJson(request); // Ubah request menjadi string JSON
             history.fileContent = docxBytes; // Simpan file
 
-            history.persist();
+            // Di dalam metode generateDocx di BeritaAcaraResource.java
+            history.persistAndFlush(); // Gunakan persistAndFlush untuk mendapatkan ID segera
 
-            ResponseBuilder response = Response.ok(new ByteArrayInputStream(out.toByteArray()));
+            ResponseBuilder response = Response.ok(new ByteArrayInputStream(docxBytes));
             response.header("Content-Disposition", "inline; filename=BA-" + request.nomorBA + ".docx");
+            response.header("X-History-ID", history.id); // Tambahkan header ini
+            response.header("Access-Control-Expose-Headers", "X-History-ID"); // Agar bisa dibaca frontend
             return response.build();
         }
     }
@@ -146,6 +152,32 @@ public class BeritaAcaraResource {
         // Buat respons dengan konten file .docx
         ResponseBuilder response = Response.ok(new ByteArrayInputStream(history.fileContent));
         response.header("Content-Disposition", "inline; filename=BA-" + history.nomorBA + ".docx");
+        return response.build();
+    }
+
+    @GET
+    @Path("/history/{id}/pdf")
+    @Produces("application/pdf")
+    @Transactional
+    public Response getHistoryAsPdf(Long id) throws Exception {
+        BeritaAcaraHistory history = BeritaAcaraHistory.findById(id);
+        if (history == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        // Muat dokumen .docx dari database
+        InputStream docxInputStream = new ByteArrayInputStream(history.fileContent);
+        WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.load(docxInputStream);
+
+        // Siapkan output stream untuk PDF
+        ByteArrayOutputStream pdfOutputStream = new ByteArrayOutputStream();
+
+        // Lakukan konversi
+        Docx4J.toPDF(wordMLPackage, pdfOutputStream);
+
+        // Kirim hasil PDF sebagai respons
+        ResponseBuilder response = Response.ok(new ByteArrayInputStream(pdfOutputStream.toByteArray()));
+        response.header("Content-Disposition", "inline; filename=BA-" + history.nomorBA + ".pdf");
         return response.build();
     }
     
