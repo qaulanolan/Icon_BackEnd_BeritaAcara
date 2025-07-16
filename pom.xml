@@ -81,11 +81,19 @@
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jsonb</artifactId>
         </dependency>
-        <dependency>
+        <!-- <dependency>
             <groupId>org.docx4j</groupId>
             <artifactId>docx4j-export-fo</artifactId>
             <version>8.3.9</version>
         </dependency>
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+        </dependency> -->
     </dependencies>
 
     <repositories>

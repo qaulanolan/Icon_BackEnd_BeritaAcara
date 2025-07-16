@@ -26,7 +26,6 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
-import org.apache.poi.xwpf.usermodel.XWPFAbstractNum;
 
 // Impor Apache POI
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
@@ -36,28 +35,28 @@ import org.apache.poi.xwpf.usermodel.XWPFTable;
 import org.apache.poi.xwpf.usermodel.XWPFTableCell;
 import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 import org.apache.poi.xwpf.usermodel.XWPFNumbering;
+import org.apache.poi.xwpf.usermodel.XWPFAbstractNum;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTAbstractNum;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTLvl;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STNumberFormat;
 
-// impor buat history
+// Impor untuk histori
 import com.rafhi.entity.BeritaAcaraHistory;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.json.bind.Jsonb;
-import jakarta.json.bind.JsonbBuilder;
-import jakarta.transaction.Transactional; // Import baru
-import java.time.LocalDateTime; // Import baru
-
-import com.rafhi.dto.HistoryResponseDTO; // Tambahkan import ini
+import jakarta.transaction.Transactional;
+import java.time.LocalDateTime;
+import com.rafhi.dto.HistoryResponseDTO;
 import java.util.stream.Collectors;
+import jakarta.ws.rs.PathParam;
 
-import org.docx4j.Docx4J;
-import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
+// Impor untuk konversi PDF
+// import org.docx4j.Docx4J;
+// import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 
 @Path("/berita-acara")
 @ApplicationScoped
-// @Consumes("application/json")
 public class BeritaAcaraResource {
 
     @Inject
@@ -66,6 +65,7 @@ public class BeritaAcaraResource {
     @POST
     @Path("/generate-docx")
     @Produces("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    @Consumes("application/json")
     @Transactional // Tambahkan anotasi ini untuk memastikan operasi database dilakukan dalam konteks transaksi
     public Response generateDocx(BeritaAcaraRequest request) throws Exception {
         String templateFileName = "UAT".equalsIgnoreCase(request.jenisBeritaAcara)
@@ -141,7 +141,7 @@ public class BeritaAcaraResource {
     @Path("/history/{id}/file")
     @Produces("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     @Transactional
-    public Response getHistoryFile(Long id) {
+    public Response getHistoryFile(@PathParam("id") Long id) {
         // Cari histori berdasarkan ID
         BeritaAcaraHistory history = BeritaAcaraHistory.findById(id);
 
@@ -155,31 +155,31 @@ public class BeritaAcaraResource {
         return response.build();
     }
 
-    @GET
-    @Path("/history/{id}/pdf")
-    @Produces("application/pdf")
-    @Transactional
-    public Response getHistoryAsPdf(Long id) throws Exception {
-        BeritaAcaraHistory history = BeritaAcaraHistory.findById(id);
-        if (history == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
+    // @GET
+    // @Path("/history/{id}/pdf")
+    // @Produces("application/pdf")
+    // @Transactional
+    // public Response getHistoryAsPdf(@PathParam("id") Long id) throws Exception {
+    //     BeritaAcaraHistory history = BeritaAcaraHistory.findById(id);
+    //     if (history == null) {
+    //         return Response.status(Response.Status.NOT_FOUND).build();
+    //     }
 
-        // Muat dokumen .docx dari database
-        InputStream docxInputStream = new ByteArrayInputStream(history.fileContent);
-        WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.load(docxInputStream);
+    //     // Muat dokumen .docx dari database
+    //     InputStream docxInputStream = new ByteArrayInputStream(history.fileContent);
+    //     WordprocessingMLPackage wordMLPackage = WordprocessingMLPackage.load(docxInputStream);
 
-        // Siapkan output stream untuk PDF
-        ByteArrayOutputStream pdfOutputStream = new ByteArrayOutputStream();
+    //     // Siapkan output stream untuk PDF
+    //     ByteArrayOutputStream pdfOutputStream = new ByteArrayOutputStream();
 
-        // Lakukan konversi
-        Docx4J.toPDF(wordMLPackage, pdfOutputStream);
+    //     // Lakukan konversi
+    //     Docx4J.toPDF(wordMLPackage, pdfOutputStream);
 
-        // Kirim hasil PDF sebagai respons
-        ResponseBuilder response = Response.ok(new ByteArrayInputStream(pdfOutputStream.toByteArray()));
-        response.header("Content-Disposition", "inline; filename=BA-" + history.nomorBA + ".pdf");
-        return response.build();
-    }
+    //     // Kirim hasil PDF sebagai respons
+    //     ResponseBuilder response = Response.ok(new ByteArrayInputStream(pdfOutputStream.toByteArray()));
+    //     response.header("Content-Disposition", "inline; filename=BA-" + history.nomorBA + ".pdf");
+    //     return response.build();
+    // }
     
     private Map<String, String> buildReplacementsMap(BeritaAcaraRequest request) {
         Map<String, String> replacements = new HashMap<>();
