@@ -68,9 +68,25 @@ public class BeritaAcaraResource {
     @Consumes("application/json")
     @Transactional // Tambahkan anotasi ini untuk memastikan operasi database dilakukan dalam konteks transaksi
     public Response generateDocx(BeritaAcaraRequest request) throws Exception {
-        String templateFileName = "UAT".equalsIgnoreCase(request.jenisBeritaAcara)
-                ? "template_uat.docx"
-                : "template_deploy.docx";
+        String templateFileName;
+
+        if ("Deployment".equalsIgnoreCase(request.jenisBeritaAcara)) {
+            templateFileName = "template_deploy.docx";
+        } else { // Asumsi jenisnya adalah UAT
+            // Hitung jumlah penandatangan dengan tipe "utama"
+            // long countUtama = request.signatoryList.stream()
+            long countUtama = request.signatoryList.stream().filter(s -> s.tipe.startsWith("utama")).count();
+                // .filter(s -> "utama".equals(s.tipe))
+                // .count();
+                
+            if (countUtama == 3) {
+                templateFileName = "template_uat_signatory4.docx"; 
+            } else if (countUtama == 4) {
+                templateFileName = "template_uat_signatory5.docx";
+            } else { // default UAT
+                templateFileName = "template_uat.docx";
+            }
+        }
 
         String templatePath = "/templates/" + templateFileName;
         InputStream templateInputStream = getClass().getResourceAsStream(templatePath);
@@ -188,6 +204,8 @@ public class BeritaAcaraResource {
 
         Signatory utama1 = request.signatoryList.stream().filter(s -> "utama1".equals(s.tipe)).findFirst().orElse(new Signatory());
         Signatory utama2 = request.signatoryList.stream().filter(s -> "utama2".equals(s.tipe)).findFirst().orElse(new Signatory());
+        Signatory utama3 = request.signatoryList.stream().filter(s -> "utama3".equals(s.tipe)).findFirst().orElse(new Signatory());
+        Signatory utama4 = request.signatoryList.stream().filter(s -> "utama4".equals(s.tipe)).findFirst().orElse(new Signatory());
         Signatory mengetahui = request.signatoryList.stream().filter(s -> "mengetahui".equals(s.tipe)).findFirst().orElse(new Signatory());
         Fitur fitur = (request.fiturList != null && !request.fiturList.isEmpty()) ? request.fiturList.get(0) : new Fitur();
 
@@ -222,6 +240,12 @@ public class BeritaAcaraResource {
         replacements.put("${signatory.utama2.perusahaan}", Objects.toString(utama2.perusahaan, ""));
         replacements.put("${signatory.utama2.nama}", Objects.toString(utama2.nama, ""));
         replacements.put("${signatory.utama2.jabatan}", Objects.toString(utama2.jabatan, ""));
+        replacements.put("${signatory.utama3.perusahaan}", Objects.toString(utama3.perusahaan, ""));
+        replacements.put("${signatory.utama3.nama}", Objects.toString(utama3.nama, ""));
+        replacements.put("${signatory.utama3.jabatan}", Objects.toString(utama3.jabatan, ""));
+        replacements.put("${signatory.utama4.perusahaan}", Objects.toString(utama4.perusahaan, ""));
+        replacements.put("${signatory.utama4.nama}", Objects.toString(utama4.nama, ""));
+        replacements.put("${signatory.utama4.jabatan}", Objects.toString(utama4.jabatan, ""));
         replacements.put("${signatory.mengetahui.perusahaan}", Objects.toString(mengetahui.perusahaan, ""));
         replacements.put("${signatory.mengetahui.nama}", Objects.toString(mengetahui.nama, ""));
         replacements.put("${signatory.mengetahui.jabatan}", Objects.toString(mengetahui.jabatan, ""));
