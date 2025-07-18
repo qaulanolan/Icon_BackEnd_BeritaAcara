@@ -3,17 +3,26 @@ package com.rafhi.dto;
 import java.util.List;
 
 public class BeritaAcaraRequest {
-    public String jenisBeritaAcara; // UAT / Deployment
-    public String kategoriAplikasi; // Web / Portal
-    public String tipeRequest;      // Change Request / Job Request
-    public String nomorBA;
-    public String tahun;
-    public String nomorSuratRequest;
-    public String tanggalSuratRequest;
-    public String tanggalPelaksanaan;
+    
+    // Informasi untuk logika dan judul
+    public String jenisBeritaAcara; // "UAT" atau "Deployment"
+    public String jenisRequest; // "Change Request" atau "Job Request"
+    public String namaAplikasiSpesifik;
     public String judulPekerjaan;
+    public String tahap; // "tahap I", "tahap II", dll.
 
+    // Informasi Nomor
+    public String nomorBA;
+    public String nomorSuratRequest;
+    public String nomorBaUat; // Khusus untuk Deployment
+
+    // Informasi Tanggal (format: "yyyy-MM-dd")
+    public String tanggalBA;
+    public String tanggalSuratRequest;
+    public String tanggalPengerjaan;
+    
+    // Daftar dinamis
     public List<Fitur> fiturList;
-    public String namaPenandatangan;
-    public String jabatanPenandatangan;
+    public List<Signatory> signatoryList;
+    
 }
