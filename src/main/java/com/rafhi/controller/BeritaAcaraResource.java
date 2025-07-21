@@ -234,21 +234,50 @@ public class BeritaAcaraResource {
         replacements.put("${fitur.status}", Objects.toString(fitur.status, ""));
         replacements.put("${fitur.keterangan}", Objects.toString(fitur.catatan, ""));
 
-        replacements.put("${signatory.utama1.perusahaan}", Objects.toString(utama1.perusahaan, ""));
+        // replacements.put("${signatory.utama1.perusahaan}", Objects.toString(utama1.perusahaan, ""));
+        replacements.put(
+            "${signatory.utama1.perusahaan}",
+            Objects.toString(utama1.perusahaan, "")
+                .replace("<br>", "\n")
+        );
         replacements.put("${signatory.utama1.nama}", Objects.toString(utama1.nama, ""));
         replacements.put("${signatory.utama1.jabatan}", Objects.toString(utama1.jabatan, ""));
-        replacements.put("${signatory.utama2.perusahaan}", Objects.toString(utama2.perusahaan, ""));
+        // replacements.put("${signatory.utama2.perusahaan}", Objects.toString(utama2.perusahaan, ""));
+        replacements.put(
+            "${signatory.utama2.perusahaan}",
+            Objects.toString(utama2.perusahaan, "")
+                .replace("<br>", "\n")
+        );
         replacements.put("${signatory.utama2.nama}", Objects.toString(utama2.nama, ""));
         replacements.put("${signatory.utama2.jabatan}", Objects.toString(utama2.jabatan, ""));
-        replacements.put("${signatory.utama3.perusahaan}", Objects.toString(utama3.perusahaan, ""));
+
+        // replacements.put("${signatory.utama3.perusahaan}", Objects.toString(utama3.perusahaan, ""));
+        replacements.put(
+            "${signatory.utama3.perusahaan}",
+            Objects.toString(utama3.perusahaan, "")
+                .replace("<br>", "\n")
+        );
         replacements.put("${signatory.utama3.nama}", Objects.toString(utama3.nama, ""));
         replacements.put("${signatory.utama3.jabatan}", Objects.toString(utama3.jabatan, ""));
-        replacements.put("${signatory.utama4.perusahaan}", Objects.toString(utama4.perusahaan, ""));
+
+        // replacements.put("${signatory.utama4.perusahaan}", Objects.toString(utama4.perusahaan, ""));
+        replacements.put(
+            "${signatory.utama4.perusahaan}",
+            Objects.toString(utama4.perusahaan, "")
+                .replace("<br>", "\n")
+        );
         replacements.put("${signatory.utama4.nama}", Objects.toString(utama4.nama, ""));
         replacements.put("${signatory.utama4.jabatan}", Objects.toString(utama4.jabatan, ""));
-        replacements.put("${signatory.mengetahui.perusahaan}", Objects.toString(mengetahui.perusahaan, ""));
+
+        // replacements.put("${signatory.mengetahui.perusahaan}", Objects.toString(mengetahui.perusahaan, ""));
+        replacements.put(
+            "${signatory.mengetahui.perusahaan}",
+            Objects.toString(mengetahui.perusahaan, "")
+                .replace("<br>", "\n")
+        );
         replacements.put("${signatory.mengetahui.nama}", Objects.toString(mengetahui.nama, ""));
         replacements.put("${signatory.mengetahui.jabatan}", Objects.toString(mengetahui.jabatan, ""));
+        
         
         return replacements;
     }
