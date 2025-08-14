@@ -4,6 +4,9 @@ import java.util.List;
 
 public class BeritaAcaraRequest {
     
+    public Long templateId; // ID dari Template yang digunakan
+    
+    // Informasi untuk pembuatan Berita Acara
     // Informasi untuk logika dan judul
     public String jenisBeritaAcara; // "UAT" atau "Deployment"
     public String jenisRequest; // "Change Request" atau "Job Request"
