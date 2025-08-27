@@ -26,7 +26,7 @@ public class TemplatePlaceholder extends PanacheEntity {
     public String label; // e.g., "Nomor Surat Dinas"
 
     @Column(nullable = false)
-    public String dataType; // "TEXT", "DATE", "RICH_TEXT"
+    public String dataType; // "TEXT", "DATE", "RICH_TEXT", dsb.
 
     public boolean isRequired = true;
 }

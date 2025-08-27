@@ -6,7 +6,7 @@ import java.util.List;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+// import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.CascadeType;
@@ -47,10 +47,9 @@ public class Template extends PanacheEntity {
         orphanRemoval = true,
         fetch = FetchType.LAZY
     )
-    @JsonManagedReference // <-- TAMBAHKAN ANOTASI INI
+    // @JsonManagedReference
     private List<TemplatePlaceholder> placeholders;
 
-    // <-- PERBAIKAN: Tambahkan Getter dan Setter di bawah ini -->
     public List<TemplatePlaceholder> getPlaceholders() {
         return placeholders;
     }

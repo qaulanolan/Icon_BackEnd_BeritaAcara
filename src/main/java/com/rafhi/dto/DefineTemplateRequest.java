@@ -12,6 +12,9 @@ public class DefineTemplateRequest {
     public String originalFileName;
     public List<TemplatePlaceholder> placeholders;
 
-    // <-- PERBAIKAN: Tambahkan field ini untuk menerima data dari checkbox -->
+    // field ini untuk menerima data dari checkbox -->
     public boolean isActive;
+
+    // Frontend akan mengisinya dengan true jika ada file baru
+    public boolean newFileUploaded = false; 
 }

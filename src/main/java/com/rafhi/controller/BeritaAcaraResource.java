@@ -521,10 +521,10 @@ import jakarta.ws.rs.core.Response.ResponseBuilder;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;
-import java.util.stream.Collectors;
+// import java.util.stream.Collectors;
 
-import jakarta.persistence.EntityManager; // <-- Tambahkan import ini
-import io.quarkus.panache.common.Sort; 
+import jakarta.persistence.EntityManager; 
+// import io.quarkus.panache.common.Sort; 
 
 @Path("/berita-acara")
 @ApplicationScoped
@@ -568,10 +568,17 @@ public class BeritaAcaraResource {
         byte[] docxBytes = beritaAcaraService.generateDocument(request.templateId, request.data);
         BeritaAcaraHistory history = beritaAcaraService.saveHistory(request.templateId, user, request.data, docxBytes);
 
-        ResponseBuilder response = Response.ok(new ByteArrayInputStream(docxBytes));
-        response.header("Content-Disposition", "inline; filename=BA-" + history.nomorBA + ".docx");
+        // Buat nama file yang deskriptif dari data yang ada di riwayat
+        // Ganti spasi dengan underscore dan hapus karakter yang tidak valid
+        String safeJenis = history.jenisBeritaAcara.replaceAll("[^a-zA-Z0-9.-]", " ");
+        String safeJudul = history.judulPekerjaan.replaceAll("[^a-zA-Z0-9.-]", " ");
+        String fileName = String.format("%s-%s.docx", safeJenis, safeJudul);
+
+        ResponseBuilder response = Response.ok(new ByteArrayInputStream(history.fileContent));
+        // Set header dengan nama file yang sudah diformat
+        response.header("Content-Disposition", "attachment; filename=\"" + fileName + "\""); 
         response.header("X-History-ID", history.id);
-        response.header("Access-Control-Expose-Headers", "X-History-ID");
+        response.header("Access-Control-Expose-Headers", "Content-Disposition, X-History-ID"); // <-- PENTING!
         return response.build();
     }
 
@@ -604,8 +611,14 @@ public class BeritaAcaraResource {
         String currentUsername = securityIdentity.getPrincipal().getName();
         BeritaAcaraHistory history = BeritaAcaraHistory.find("id = ?1 and user.username = ?2", id, currentUsername).firstResult();
         if (history == null) return Response.status(Response.Status.NOT_FOUND).build();
+        
+        String safeJenis = history.jenisBeritaAcara.replaceAll("[^a-zA-Z0-9.-]", " ");
+        String safeJudul = history.judulPekerjaan.replaceAll("[^a-zA-Z0-9.-]", " ");
+        String fileName = String.format("%s-%s.docx", safeJenis, safeJudul);
+
         ResponseBuilder response = Response.ok(new ByteArrayInputStream(history.fileContent));
-        response.header("Content-Disposition", "inline; filename=BA-" + history.nomorBA + ".docx");
+        response.header("Content-Disposition", "attachment; filename=\"" + fileName + "\"");
+        response.header("Access-Control-Expose-Headers", "Content-Disposition"); // <-- PENTING!
         return response.build();
     }
 }

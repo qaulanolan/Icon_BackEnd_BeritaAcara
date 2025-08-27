@@ -1,8 +1,12 @@
 package com.rafhi.controller;
 
 import com.rafhi.dto.DefineTemplateRequest;
+import com.rafhi.dto.TemplateDetailDTO;
+import com.rafhi.dto.TemplatePlaceholderDTO;
+import com.rafhi.dto.TemplateStatusUpdateRequest;
+import com.rafhi.dto.TemplateSummaryDTO;
 import com.rafhi.entity.Template;
-import com.rafhi.entity.TemplatePlaceholder;
+// import com.rafhi.entity.TemplatePlaceholder;
 import com.rafhi.service.TemplateService;
 
 import jakarta.annotation.security.RolesAllowed;
@@ -13,12 +17,6 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 
-// import jakarta.ws.rs.DELETE;
-// import jakarta.ws.rs.GET;
-// import jakarta.ws.rs.NotFoundException;
-// import jakarta.ws.rs.POST;
-// import jakarta.ws.rs.PUT;
-
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
@@ -28,17 +26,16 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Path("/api/admin/templates")
 @RolesAllowed("ADMIN")
 @Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON) // Default Consumes untuk sebagian besar method
 public class TemplateAdminResource {
 
     @Inject
@@ -49,6 +46,7 @@ public class TemplateAdminResource {
 
     /**
      * Langkah 1 (Create): Menerima file, memindai placeholder, dan menyimpannya sementara.
+     * Endpoint ini tidak perlu @Transactional karena hanya bekerja dengan file.
      */
     @POST
     @Path("/upload-and-scan")
@@ -58,7 +56,7 @@ public class TemplateAdminResource {
             Map<String, List<InputPart>> uploadForm = input.getFormDataMap();
             List<InputPart> inputParts = uploadForm.get("file");
             if (inputParts == null || inputParts.isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("Bagian 'file' tidak ditemukan.").build();
+                return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\":\"Bagian 'file' tidak ditemukan.\"}").build();
             }
 
             InputPart filePart = inputParts.get(0);
@@ -77,21 +75,23 @@ public class TemplateAdminResource {
 
             return Response.ok(response).build();
         } catch (IOException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Gagal memproses file: " + e.getMessage()).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\":\"Gagal memproses file: " + e.getMessage() + "\"}").build();
         }
     }
 
     /**
-     * Langkah 2 (Create): Menerima metadata dan daftar placeholder, lalu menyimpan template baru.
+     * Langkah 2 (Create): Menerima metadata, lalu menyimpan template baru.
+     * Mengembalikan DTO detail dari template yang baru dibuat.
      */
     @POST
     @Path("/define-and-save")
+    @Consumes(MediaType.APPLICATION_JSON)
     @Transactional
     public Response defineAndSave(DefineTemplateRequest request) {
         try {
             java.nio.file.Path tempPath = Paths.get(request.tempFilePath);
             if (!Files.exists(tempPath)) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("File sementara tidak ditemukan.").build();
+                return Response.status(Response.Status.BAD_REQUEST).entity("{\"error\":\"File sementara tidak ditemukan.\"}").build();
             }
 
             String newFileName = UUID.randomUUID() + ".docx";
@@ -99,115 +99,134 @@ public class TemplateAdminResource {
             Files.createDirectories(finalPath.getParent());
             Files.move(tempPath, finalPath, StandardCopyOption.REPLACE_EXISTING);
 
-            Template template = new Template();
-            template.templateName = request.templateName;
-            template.description = request.description;
-            template.originalFileName = request.originalFileName;
-            template.fileNameStored = newFileName;
-            template.setPlaceholders(new ArrayList<>()); // Inisialisasi list
-            template.persist();
-
-            for (TemplatePlaceholder ph : request.placeholders) {
-                ph.template = template;
-                ph.persist();
-                template.getPlaceholders().add(ph);
-            }
-
-            return Response.status(Response.Status.CREATED).entity(template).build();
+            Template template = templateService.createTemplateFromRequest(request, newFileName);
+            
+            return Response.status(Response.Status.CREATED).entity(mapToDetailDTO(template)).build();
         } catch (IOException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Gagal menyimpan template: " + e.getMessage()).build();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("{\"error\":\"Gagal menyimpan template: " + e.getMessage() + "\"}").build();
         }
     }
 
     /**
-     * Mengambil daftar semua template untuk tabel admin.
+     * Mengambil daftar semua template (info ringkas) untuk tabel admin.
+     * Mengembalikan List<TemplateSummaryDTO>.
      */
     @GET
+    @Consumes(MediaType.WILDCARD) // Izinkan GET tanpa body
     public Response getAllTemplatesForAdmin() {
-        return Response.ok(templateService.listAllForAdmin()).build();
+        List<Template> templates = templateService.listAllForAdmin();
+        List<TemplateSummaryDTO> dtos = templates.stream()
+            .map(this::mapToSummaryDTO)
+            .collect(Collectors.toList());
+        return Response.ok(dtos).build();
     }
 
-    // <-- PENYESUAIAN: Method untuk mengambil data EDIT ditambahkan di sini -->
     /**
-     * Mengambil detail satu template LENGKAP DENGAN PLACEHOLDER-nya untuk halaman edit.
-     * INI ADALAH KUNCI PERBAIKAN MASALAH EDIT.
+     * Mengambil detail satu template LENGKAP dengan placeholder-nya untuk form edit.
+     * Mengembalikan TemplateDetailDTO.
      */
     @GET
     @Path("/{id}")
+    @Consumes(MediaType.WILDCARD) // Izinkan GET tanpa body
+    @Transactional
     public Response getTemplateById(@PathParam("id") Long id) {
-        Template template = templateService.findByIdWithPlaceholders(id);
+        Template template = templateService.findById(id);
         if (template == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return Response.ok(template).build();
+        return Response.ok(mapToDetailDTO(template)).build();
     }
 
-    // <-- PENYESUAIAN: Method untuk UPDATE (menyimpan perubahan) ditambahkan di sini -->
     /**
-     * Menyimpan perubahan pada template yang sudah ada.
+     * Endpoint efisien untuk mengubah status aktif/tidak aktif sebuah template.
+     * Mengembalikan TemplateSummaryDTO.
+     */
+    @PATCH
+    @Path("/{id}/status")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional
+    public Response updateTemplateStatus(@PathParam("id") Long id, TemplateStatusUpdateRequest request) {
+        Template template = templateService.updateStatus(id, request.isActive);
+        if (template == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        return Response.ok(mapToSummaryDTO(template)).build();
+    }
+
+    /**
+     * Menyimpan perubahan pada template yang sudah ada (form edit lengkap).
+     * Mengembalikan TemplateDetailDTO.
      */
     @PUT
     @Path("/{id}")
     @Transactional
     public Response updateTemplate(@PathParam("id") Long id, DefineTemplateRequest request) {
-        // 1. Ambil template LENGKAP dengan list placeholder-nya
-        Template template = templateService.findByIdWithPlaceholders(id);
-        if (template == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        }
-
-        // 2. Update field utama dari template
-        template.templateName = request.templateName;
-        template.description = request.description;
-        template.isActive = request.isActive;
-
-        // 3. Ambil referensi ke list yang sudah ada (dikelola Hibernate)
-        List<TemplatePlaceholder> managedPlaceholders = template.getPlaceholders();
-
-        // 4. BERSIHKAN list yang ada. Karena ada `orphanRemoval=true`,
-        //    Hibernate akan secara otomatis menghapus placeholder lama dari database.
-        managedPlaceholders.clear();
-
-        // 5. Buat dan tambahkan placeholder baru ke list YANG SAMA.
-        for (TemplatePlaceholder phFromRequest : request.placeholders) {
-            TemplatePlaceholder newPh = new TemplatePlaceholder();
-            newPh.template = template;
-            newPh.placeholderKey = phFromRequest.placeholderKey;
-            newPh.label = phFromRequest.label;
-            newPh.dataType = phFromRequest.dataType;
-            newPh.isRequired = phFromRequest.isRequired;
-            // Tidak perlu `newPh.persist()` karena relasi di-cascade dari `template`
-            managedPlaceholders.add(newPh);
-        }
-
-        // 6. Simpan perubahan pada template. Cascade akan menangani penyimpanan placeholder baru.
-        template.persist();
-
-        return Response.ok(template).build();
-    }
-
-
-    /**
-     * Menghapus sebuah template.
-     */
-    @DELETE
-    @Path("/{id}")
-    public Response deleteTemplate(@PathParam("id") Long id) {
         try {
-            templateService.delete(id);
-            return Response.noContent().build(); // Standard response for successful delete
-        } catch (NotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).entity(e.getMessage()).build();
+            Template template = templateService.updateTemplateFromRequest(id, request);
+            if (template == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            return Response.ok(mapToDetailDTO(template)).build();
         } catch (IOException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("Gagal menghapus file template fisik: " + e.getMessage())
-                    .build();
+                        .entity("{\"error\":\"Gagal memproses file saat update: " + e.getMessage() + "\"}")
+                        .build();
         }
     }
 
-    /**
-     * Helper untuk mendapatkan nama file dari header multipart.
-     */
+    // /**
+    //  * Menghapus sebuah template.
+    //  */
+    // @DELETE
+    // @Path("/{id}")
+    // @Consumes(MediaType.WILDCARD) // Izinkan DELETE tanpa body
+    // public Response deleteTemplate(@PathParam("id") Long id) {
+    //     try {
+    //         templateService.delete(id);
+    //         return Response.noContent().build();
+    //     } catch (NotFoundException e) {
+    //         return Response.status(Response.Status.NOT_FOUND).entity("{\"error\":\"" + e.getMessage() + "\"}").build();
+    //     } catch (IOException e) {
+    //         return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+    //                 .entity("{\"error\":\"Gagal menghapus file fisik: " + e.getMessage() + "\"}")
+    //                 .build();
+    //     }
+    // }
+
+    // =======================================================
+    // === METHOD HELPER UNTUK MAPPING DAN LAINNYA ===
+    // =======================================================
+    
+    private TemplateSummaryDTO mapToSummaryDTO(Template template) {
+        TemplateSummaryDTO dto = new TemplateSummaryDTO();
+        dto.id = template.id;
+        dto.templateName = template.templateName;
+        dto.description = template.description;
+        dto.isActive = template.isActive;
+        return dto;
+    }
+
+    private TemplateDetailDTO mapToDetailDTO(Template template) {
+        TemplateDetailDTO dto = new TemplateDetailDTO();
+        dto.id = template.id;
+        dto.templateName = template.templateName;
+        dto.description = template.description;
+        dto.isActive = template.isActive;
+        
+        dto.placeholders = template.getPlaceholders().stream()
+            .map(p -> {
+                TemplatePlaceholderDTO pDto = new TemplatePlaceholderDTO();
+                pDto.id = p.id;
+                pDto.placeholderKey = p.placeholderKey;
+                pDto.label = p.label;
+                pDto.dataType = p.dataType;
+                return pDto;
+            })
+            .collect(Collectors.toList());
+            
+        return dto;
+    }
+
     private String getFileName(MultivaluedMap<String, String> headers) {
         String[] contentDisposition = headers.getFirst("Content-Disposition").split(";");
         for (String filename : contentDisposition) {

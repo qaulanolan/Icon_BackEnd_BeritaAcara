@@ -339,14 +339,14 @@ public class BeritaAcaraService {
         // Definisikan setiap level indentasi
         if ("ul".equals(listType)) {
             // Bulleted list multi-level
-            addNumberingLevel(cTAbstractNum, 0, STNumberFormat.BULLET, "-"); // Level 1: •
-            addNumberingLevel(cTAbstractNum, 1, STNumberFormat.BULLET, "-"); // Level 2: o
-            addNumberingLevel(cTAbstractNum, 2, STNumberFormat.BULLET, "-"); // Level 3: ▪
+            addNumberingLevel(cTAbstractNum, 0, STNumberFormat.BULLET, "-"); // Level 1: -
+            addNumberingLevel(cTAbstractNum, 1, STNumberFormat.BULLET, "-"); // Level 2: -
+            addNumberingLevel(cTAbstractNum, 2, STNumberFormat.BULLET, "•"); // Level 3: •
         } else { // "ol"
             // Ordered list multi-level
-            addNumberingLevel(cTAbstractNum, 0, STNumberFormat.DECIMAL, "%1.");       // Level 1: 1.
-            addNumberingLevel(cTAbstractNum, 1, STNumberFormat.BULLET, "-"); // Level 2: a)
-            addNumberingLevel(cTAbstractNum, 2, STNumberFormat.LOWER_ROMAN, "%3.");  // Level 3: i.
+            addNumberingLevel(cTAbstractNum, 0, STNumberFormat.DECIMAL, "%1."); // Level 1: 1.
+            addNumberingLevel(cTAbstractNum, 1, STNumberFormat.BULLET, "-"); // Level 2: -
+            addNumberingLevel(cTAbstractNum, 2, STNumberFormat.BULLET, "•"); // Level 3: •
         }
 
         // Daftarkan definisi abstractNum ini ke dokumen
@@ -356,36 +356,11 @@ public class BeritaAcaraService {
         // Buat instance numbering konkret dari definisi abstract di atas
         return numbering.addNum(abstractNumId);
     }
-
+    
     /**
      * Helper untuk mendefinisikan setiap level indentasi dalam sebuah list,
      * termasuk format (angka, huruf, bullet) dan indentasinya.
      */
-    // private void addNumberingLevel(CTAbstractNum abstractNum, int level, STNumberFormat.Enum format, String lvlText) {
-    //     CTLvl cTLvl = abstractNum.addNewLvl();
-    //     cTLvl.setIlvl(BigInteger.valueOf(level));
-    //     cTLvl.addNewNumFmt().setVal(format);
-    //     cTLvl.addNewLvlText().setVal(lvlText);
-    //     cTLvl.addNewStart().setVal(BigInteger.valueOf(1));
-
-    //     // Atur indentasi spesifik untuk setiap level.
-    //     // Nilai dalam TWIPs (1/1440 inci). 720 TWIPs = 0.5 inci.
-    //     long hangingIndent = 360L;
-    //     long leftIndent = 720L * (level + 1); // Indentasi bertambah 0.5 inci per level
-
-    //     // Pastikan PPr ada sebelum menambahkan Ind
-    //     if (cTLvl.getPPr() == null) {
-    //         cTLvl.addNewPPr();
-    //     }
-    //     if (cTLvl.getPPr().getInd() == null) {
-    //         cTLvl.getPPr().addNewInd();
-    //     }
-        
-    //     cTLvl.getPPr().getInd().setLeft(BigInteger.valueOf(leftIndent));
-    //     cTLvl.getPPr().getInd().setHanging(BigInteger.valueOf(hangingIndent));
-    // }
-    
-    //  Helper baru untuk menambahkan level ke definisi numbering
     private void addNumberingLevel(CTAbstractNum abstractNum, int level, STNumberFormat.Enum format, String lvlText) {
         CTLvl cTLvl = abstractNum.addNewLvl();
         cTLvl.setIlvl(BigInteger.valueOf(level));

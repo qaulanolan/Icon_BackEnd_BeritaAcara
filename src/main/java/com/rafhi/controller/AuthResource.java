@@ -14,7 +14,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
 import java.time.Duration;
-import java.util.Set; // Gunakan Set untuk groups
+import java.util.Set;
 
 @Path("/auth")
 public class AuthResource {
@@ -35,7 +35,6 @@ public class AuthResource {
                     .build();
         }
         
-        // --- PERBAIKAN: Set peran saat registrasi ---
         // Asumsi pengguna baru selalu memiliki peran "USER".
         // Gunakan metode `add` yang sudah ada di AppUser.
         AppUser.add(data.username, data.password, "USER");
@@ -45,68 +44,24 @@ public class AuthResource {
                        .build();
     }
 
-    // @POST
-    // @Path("/login")
-    // @Consumes(MediaType.APPLICATION_JSON)
-    // @Produces(MediaType.APPLICATION_JSON) // Lebih baik mengembalikan JSON
-    // @PermitAll
-    // public Response login(LoginRequest credentials) {
-    //     // Logika verifikasi password sudah diurus oleh Quarkus Security Realm,
-    //     // tapi kita perlu mencari user untuk mendapatkan rolenya.
-    //     AppUser user = AppUser.find("username", credentials.username).firstResult();
-        
-    //     // BcryptUtil.matches sudah tidak diperlukan jika realm aktif,
-    //     // tapi kita tetap memerlukannya di sini untuk verifikasi manual sebelum membuat token.
-    //     // Ini adalah pendekatan yang aman.
-    //     if (user != null && io.quarkus.elytron.security.common.BcryptUtil.matches(credentials.password, user.password)) {
-            
-    //         // --- PERBAIKAN: Pastikan `groups` diisi dengan `user.role` ---
-    //         String token = Jwt.issuer("https://yourdomain.com/issuer")
-    //                           .upn(user.username) // upn (User Principal Name) adalah klaim standar
-    //                           .groups(Set.of(user.role)) // Klaim 'groups' diisi dengan peran
-    //                           .expiresIn(Duration.ofHours(24))
-    //                           .sign();
-
-    //         // Kembalikan token dalam format JSON
-    //         return Response.ok("{\"token\":\"" + token + "\"}").build();
-    //     }
-
-    //     return Response.status(Response.Status.UNAUTHORIZED)
-    //                    .entity("{\"error\":\"Username atau password salah.\"}")
-    //                    .build();
-    // }
-
     @POST
     @Path("/login")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     @PermitAll
     public Response login(LoginRequest credentials) {
-        // --- TAMBAHKAN LOGGING DI SINI ---
-        // System.out.println("--- Mencoba Login ---");
-        // System.out.println("Username dari Request: '" + credentials.username + "'");
-        // System.out.println("Password dari Request: '" + credentials.password + "'");
 
         AppUser user = AppUser.find("username", credentials.username).firstResult();
         
         if (user != null) {
-            // System.out.println("User Ditemukan di DB: '" + user.username + "'");
-            // System.out.println("Hash Password dari DB: '" + user.password + "'");
-
-            // boolean passwordMatches = io.quarkus.elytron.security.common.BcryptUtil.matches(credentials.password, user.password);
-            // System.out.println("Apakah password cocok? " + passwordMatches);
-
-            // if (passwordMatches) {
-                // System.out.println("Login Berhasil! Membuat token...");
-                String token = Jwt.issuer("https://yourdomain.com/issuer")
-                                  .upn(user.username)
-                                  .groups(Set.of(user.role))
-                                  .expiresIn(Duration.ofHours(24))
-                                  .sign();
-                return Response.ok("{\"token\":\"" + token + "\"}").build();
-            // }
+            String token = Jwt.issuer("https://yourdomain.com/issuer")
+                                .upn(user.username)
+                                .groups(Set.of(user.role))
+                                .expiresIn(Duration.ofHours(24))
+                                .sign();
+            return Response.ok("{\"token\":\"" + token + "\"}").build();
         } else {
-            System.out.println("User TIDAK Ditemukan di DB untuk username: '" + credentials.username + "'");
+            System.out.println("User TIDAK Ditemukan di Database untuk username: '" + credentials.username + "'");
         }
 
         System.out.println("Login Gagal. Mengembalikan 401 Unauthorized.");
@@ -121,9 +76,10 @@ public class AuthResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response me() {
         String username = securityIdentity.getPrincipal().getName();
-        // --- PERBAIKAN: Kembalikan juga role pengguna ---
+
         // Ambil role dari SecurityIdentity
         Set<String> roles = securityIdentity.getRoles();
+        
         // Ambil role pertama, asumsi hanya ada satu role per user
         String role = roles.isEmpty() ? "USER" : roles.iterator().next(); 
         

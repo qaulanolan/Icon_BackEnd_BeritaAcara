@@ -41,7 +41,6 @@ public class DateToWordsHelper {
         return date.format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
     }
 
-    // Simple number to words for Indonesian (1-31 and years)
     private String numberToWords(int number) {
         String[] units = {
             "", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh",
@@ -69,7 +68,7 @@ public class DateToWordsHelper {
     }
 
     public String getFormattedDate() {
-        // d-MMMM-yyyy akan menghasilkan format seperti "1-Juli-2025"
+        // d MMMM yyyy akan menghasilkan format seperti "1 Juli 2025"
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.forLanguageTag("id-ID"));
         return date.format(formatter);
     }
